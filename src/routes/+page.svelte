@@ -1,33 +1,48 @@
 <script lang="ts">
-	import type { PageData } from './$types';
+	let { data } = $props();
+	let content = $state('');
 
-	let { data }: { data: PageData } = $props();
+	async function getToDoItem(toDoItemId: string) {
+		const response = await fetch(`/toDoItem/${toDoItemId}`, {
+			method: 'GET'
+		});
+		const { toDoItem } = await response.json();
+		console.log('toDoItem', toDoItem);
+		return toDoItem;
+	}
 
-    let itemId = $state(0);
-	let queryParam = $state('');
-
-	let serverResponse = $state();
-
-	async function fetchData() {
-		const serverUrl = `http://127.0.0.1:8000/items/${itemId}/?q=${queryParam}`;
-		const response = await fetch(serverUrl);
-		serverResponse = await response.json();
+	async function addToDoItem() {
+		const response = await fetch('/toDoItem', {
+			method: 'POST',
+			body: JSON.stringify({ content }),
+			headers: {
+				'Content-Type': 'application/json'
+			}
+		});
+		content = '';
+		const { toDoItemId } = await response.json();
+		const toDoItem = await getToDoItem(toDoItemId);
+		const toDoItems = [...data.toDoItems, toDoItem];
+		data = { ...data, toDoItems };
 	}
 </script>
 
-<h1>Welcome to SvelteKit</h1>
-<p>Visit <a href="https://svelte.dev/docs/kit">svelte.dev/docs/kit</a> to read the documentation</p>
-<p>{JSON.stringify(data.info)}</p>
+<div>
+	<h1>Your To Do List</h1>
+	<h2>Your userId is {data.userId}</h2>
+</div>
 
-<br />
-<br />
+<div>
+	<form onsubmit={addToDoItem}>
+		<input type="text" name="content" autocomplete="off" required bind:value={content} />
+		<button type="submit">Add</button>
+	</form>
+</div>
 
-<label>
-	Enter the query parameter:
-	<input type="text" bind:value={queryParam} />
-    Enter the item id:
-    <input type="number" bind:value={itemId} />
-	<button onclick={fetchData}>Submit</button>
-</label>
-
-<h3>Response received from server: {JSON.stringify(serverResponse)}</h3>
+<div>
+	<ul>
+		{#each data.toDoItems as toDoItem (toDoItem.id)}
+			<li>{toDoItem.id} : {toDoItem.content} : {toDoItem.status}</li>
+		{/each}
+	</ul>
+</div>
